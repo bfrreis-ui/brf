@@ -2,12 +2,28 @@
    BRENO REIS FOTOGRAFIA — main.js
    ============================================================ */
 
-/* NAV — escurece ao rolar */
+/* NAV — escurece ao rolar e oculta ao descer */
 const nav = document.getElementById('nav');
 if (nav) {
   const navIsSolid = nav.dataset.solid === 'true';
   if (!navIsSolid) {
-    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 40);
+    let lastScrollY = window.scrollY;
+
+    const onScroll = () => {
+      const y = window.scrollY;
+      nav.classList.toggle('scrolled', y > 40);
+
+      if (y > 100) {
+        const diff = y - lastScrollY;
+        if (diff > 5)       nav.classList.add('hidden');
+        else if (diff < -5) nav.classList.remove('hidden');
+        if (Math.abs(diff) > 5) lastScrollY = y;
+      } else {
+        nav.classList.remove('hidden');
+        lastScrollY = y;
+      }
+    };
+
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
   }
@@ -20,6 +36,7 @@ if (navToggle && navLinks) {
   navToggle.addEventListener('click', () => {
     navToggle.classList.toggle('open');
     navLinks.classList.toggle('open');
+    if (nav) nav.classList.remove('hidden');
   });
   navLinks.querySelectorAll('a').forEach(a => {
     a.addEventListener('click', () => {
@@ -45,7 +62,6 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-/* Aplica stagger automático em grupos */
 document.querySelectorAll('.especialidades, .passos, .pq-grid, .diferenciais, .portfolio-grid-preview').forEach(group => {
   group.querySelectorAll('.reveal, .reveal-img').forEach((el, i) => {
     el.style.transitionDelay = `${i * 0.12}s`;
@@ -55,7 +71,7 @@ document.querySelectorAll('.especialidades, .passos, .pq-grid, .diferenciais, .p
 document.querySelectorAll('.reveal, .reveal-img').forEach(el => revealObserver.observe(el));
 
 /* PORTFOLIO — filtro por categoria */
-const filterBtns    = document.querySelectorAll('.filter-btn');
+const filterBtns     = document.querySelectorAll('.filter-btn');
 const portfolioItems = document.querySelectorAll('.portfolio-grid-item');
 
 if (filterBtns.length && portfolioItems.length) {
@@ -67,9 +83,7 @@ if (filterBtns.length && portfolioItems.length) {
       portfolioItems.forEach(item => {
         const match = cat === 'all' || item.dataset.cat === cat;
         item.style.display = match ? '' : 'none';
-        if (match && !item.classList.contains('visible')) {
-          item.classList.add('visible');
-        }
+        if (match && !item.classList.contains('visible')) item.classList.add('visible');
       });
     });
   });
@@ -85,7 +99,7 @@ let copyrightToastTimeout;
 document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   copyrightToast.style.left = `${e.clientX + 14}px`;
-  copyrightToast.style.top = `${e.clientY + 14}px`;
+  copyrightToast.style.top  = `${e.clientY + 14}px`;
   copyrightToast.classList.add('show');
   clearTimeout(copyrightToastTimeout);
   copyrightToastTimeout = setTimeout(() => copyrightToast.classList.remove('show'), 1800);
@@ -95,10 +109,10 @@ document.addEventListener('dragstart', (e) => {
 });
 
 /* PORTFOLIO — lightbox */
-const lightbox       = document.getElementById('lightbox');
-const lightboxImg    = document.getElementById('lightboxImg');
+const lightbox        = document.getElementById('lightbox');
+const lightboxImg     = document.getElementById('lightboxImg');
 const lightboxCounter = document.getElementById('lightboxCounter');
-const galleryImgs    = Array.from(document.querySelectorAll('.portfolio-grid-item img'));
+const galleryImgs     = Array.from(document.querySelectorAll('.portfolio-grid-item img'));
 
 if (lightbox && galleryImgs.length) {
   let currentIndex = 0;
@@ -129,21 +143,110 @@ if (lightbox && galleryImgs.length) {
   document.getElementById('lightboxPrev').addEventListener('click', () => showImage(currentIndex - 1));
   document.getElementById('lightboxNext').addEventListener('click', () => showImage(currentIndex + 1));
 
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) closeLightbox();
-  });
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
 
   document.addEventListener('keydown', (e) => {
     if (!lightbox.classList.contains('open')) return;
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === 'ArrowLeft') showImage(currentIndex - 1);
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  showImage(currentIndex - 1);
     if (e.key === 'ArrowRight') showImage(currentIndex + 1);
+  });
+}
+
+/* SMOOTH SCROLL — momentum suave (somente desktop e páginas com scroll) */
+if (!document.body.classList.contains('home-page') && !('ontouchstart' in window)) {
+  let rafId    = null;
+  let currentY = window.scrollY;
+  let targetY  = currentY;
+
+  window.addEventListener('wheel', (e) => {
+    if (lightbox && lightbox.classList.contains('open')) return;
+    e.preventDefault();
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 40;
+    if (e.deltaMode === 2) delta *= window.innerHeight;
+    const maxY = document.documentElement.scrollHeight - window.innerHeight;
+    targetY = Math.max(0, Math.min(targetY + delta, maxY));
+    if (!rafId) rafId = requestAnimationFrame(lerpScroll);
+  }, { passive: false });
+
+  function lerpScroll() {
+    const diff = targetY - currentY;
+    if (Math.abs(diff) < 0.5) {
+      currentY = targetY;
+      window.scrollTo(0, currentY);
+      rafId = null;
+    } else {
+      currentY += diff * 0.1;
+      window.scrollTo(0, currentY);
+      rafId = requestAnimationFrame(lerpScroll);
+    }
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!rafId) currentY = window.scrollY;
+  }, { passive: true });
+}
+
+/* CONTACTO — validação do campo telefone (apenas números e +) */
+const telInput = document.getElementById('telefone');
+if (telInput) {
+  telInput.addEventListener('input', () => {
+    telInput.value = telInput.value.replace(/[^0-9+]/g, '');
+  });
+  telInput.addEventListener('keydown', (e) => {
+    const allowed = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End'];
+    if (allowed.includes(e.key) || e.key === '+' || /^\d$/.test(e.key)) return;
+    e.preventDefault();
+  });
+}
+
+/* CONTACTO — validação do campo e-mail */
+const emailInput = document.getElementById('email');
+if (emailInput) {
+  const emailError = document.createElement('span');
+  emailError.className = 'form-error';
+  emailError.textContent = 'Por favor, insira um e-mail válido.';
+  emailInput.parentNode.appendChild(emailError);
+
+  const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+
+  emailInput.addEventListener('blur', () => {
+    if (emailInput.value && !isValidEmail(emailInput.value)) {
+      emailInput.classList.add('error');
+      emailError.classList.add('show');
+    } else {
+      emailInput.classList.remove('error');
+      emailError.classList.remove('show');
+    }
+  });
+
+  emailInput.addEventListener('input', () => {
+    if (emailInput.classList.contains('error') && isValidEmail(emailInput.value)) {
+      emailInput.classList.remove('error');
+      emailError.classList.remove('show');
+    }
   });
 }
 
 /* FORMSPREE — envio assíncrono */
 const form = document.getElementById('contactForm');
 if (form) {
+  let formSubmitted = false;
+
+  /* Alerta ao tentar sair com campos preenchidos */
+  window.addEventListener('beforeunload', (e) => {
+    if (formSubmitted) return;
+    const fields = form.querySelectorAll('input, textarea, select');
+    const hasContent = Array.from(fields).some(f =>
+      f.tagName === 'SELECT' ? f.value !== '' : f.value.trim() !== ''
+    );
+    if (hasContent) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('button[type="submit"]');
@@ -158,6 +261,7 @@ if (form) {
         headers: { Accept: 'application/json' }
       });
       if (res.ok) {
+        formSubmitted = true;
         form.style.display = 'none';
         document.getElementById('formSuccess').classList.add('show');
       } else {
