@@ -153,41 +153,6 @@ if (lightbox && galleryImgs.length) {
   });
 }
 
-/* SMOOTH SCROLL — momentum suave (somente desktop e páginas com scroll) */
-if (!document.body.classList.contains('home-page') && !('ontouchstart' in window)) {
-  let rafId    = null;
-  let currentY = window.scrollY;
-  let targetY  = currentY;
-
-  window.addEventListener('wheel', (e) => {
-    if (lightbox && lightbox.classList.contains('open')) return;
-    e.preventDefault();
-    let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 40;
-    if (e.deltaMode === 2) delta *= window.innerHeight;
-    const maxY = document.documentElement.scrollHeight - window.innerHeight;
-    targetY = Math.max(0, Math.min(targetY + delta, maxY));
-    if (!rafId) rafId = requestAnimationFrame(lerpScroll);
-  }, { passive: false });
-
-  function lerpScroll() {
-    const diff = targetY - currentY;
-    if (Math.abs(diff) < 0.5) {
-      currentY = targetY;
-      window.scrollTo(0, currentY);
-      rafId = null;
-    } else {
-      currentY += diff * 0.1;
-      window.scrollTo(0, currentY);
-      rafId = requestAnimationFrame(lerpScroll);
-    }
-  }
-
-  window.addEventListener('scroll', () => {
-    if (!rafId) currentY = window.scrollY;
-  }, { passive: true });
-}
-
 /* CONTACTO — validação do campo telefone (apenas números e +) */
 const telInput = document.getElementById('telefone');
 if (telInput) {
