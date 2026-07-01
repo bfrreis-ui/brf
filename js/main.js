@@ -98,8 +98,10 @@ document.body.appendChild(copyrightToast);
 let copyrightToastTimeout;
 document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  copyrightToast.style.left = `${e.clientX + 14}px`;
-  copyrightToast.style.top  = `${e.clientY + 14}px`;
+  const px = e.clientX > 0 ? e.clientX + 14 : window.innerWidth / 2 - 90;
+  const py = e.clientY > 0 ? e.clientY + 14 : window.innerHeight / 2;
+  copyrightToast.style.left = `${Math.min(px, window.innerWidth - 220)}px`;
+  copyrightToast.style.top  = `${Math.max(py, 90)}px`;
   copyrightToast.classList.add('show');
   clearTimeout(copyrightToastTimeout);
   copyrightToastTimeout = setTimeout(() => copyrightToast.classList.remove('show'), 1800);
@@ -166,6 +168,19 @@ if (telInput) {
   });
 }
 
+/* CONTACTO — validação do campo nome (apenas letras) */
+const nomeInput = document.getElementById('nome');
+if (nomeInput) {
+  nomeInput.addEventListener('input', () => {
+    nomeInput.value = nomeInput.value.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '');
+  });
+  nomeInput.addEventListener('keydown', (e) => {
+    const allowed = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End',' '];
+    if (allowed.includes(e.key) || /^[a-zA-ZÀ-ÿ'-]$/.test(e.key)) return;
+    e.preventDefault();
+  });
+}
+
 /* CONTACTO — validação do campo e-mail */
 const emailInput = document.getElementById('email');
 if (emailInput) {
@@ -191,6 +206,15 @@ if (emailInput) {
       emailInput.classList.remove('error');
       emailError.classList.remove('show');
     }
+  });
+}
+
+/* CONTACTO — textarea mensagem auto-expand */
+const textareaField = document.getElementById('mensagem');
+if (textareaField) {
+  textareaField.addEventListener('input', () => {
+    textareaField.style.height = 'auto';
+    textareaField.style.height = textareaField.scrollHeight + 'px';
   });
 }
 
